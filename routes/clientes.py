@@ -1,13 +1,13 @@
 from flask import Blueprint, jsonify, request
 
-from database import execute_query, fetch_all, fetch_one
+from database import execute_query, fetch_all
 
 clientes_bp = Blueprint("clientes", __name__, url_prefix="/clientes")
 
 
 @clientes_bp.route("", methods=["GET"])
 def listar_clientes():
-    try:
+    try: 
         clientes = fetch_all("SELECT * FROM cliente ORDER BY id_cliente DESC")
         return jsonify(clientes), 200
     except Exception as e:
@@ -16,53 +16,13 @@ def listar_clientes():
 
 @clientes_bp.route("/<int:id>", methods=["GET"])
 def buscar_cliente(id):
+    ## teste de rota para verificar se a API está funcionando
     try:
-        cliente = fetch_one("SELECT * FROM cliente WHERE id_cliente = %s", (id,))
-        if not cliente:
-            return jsonify({"error": "Cliente não encontrado"}), 404
-        return jsonify(cliente), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@clientes_bp.route("", methods=["POST"])
-def criar_cliente():
-    dados = request.get_json(silent=True) or {}
-
-    campos = [
-        "nome",
-        "cpf",
-        "rg",
-        "data_nascimento",
-        "endereco",
-        "telefone",
-        "email",
-        "senha_hash",
-    ]
-    faltando = [campo for campo in campos if not dados.get(campo)]
-
-    if faltando:
-        return jsonify({"error": f"Campos obrigatórios faltando: {faltando}"}), 400
-
-    try:
-        cliente_id = execute_query(
-            """
-            INSERT INTO cliente (
-                nome, cpf, rg, data_nascimento, endereco, telefone, email, senha_hash
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """,
-            (
-                dados["nome"],
-                dados["cpf"],
-                dados["rg"],
-                dados["data_nascimento"],
-                dados["endereco"],
-                dados["telefone"],
-                dados["email"],
-                dados["senha_hash"],
-            ),
-        )
-        return jsonify({"id_cliente": cliente_id, "message": "Cliente cadastrado"}), 201
+        return jsonify({"status": "ok", "message": "API funcionando sim"})
+        ##cliente = fetch_one("SELECT * FROM cliente WHERE id_cliente = %s", (id,))
+        ##if not cliente:
+           ## return jsonify({"error": "Cliente não encontrado"}), 404
+        ##return jsonify(cliente), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

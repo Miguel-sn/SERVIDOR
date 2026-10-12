@@ -1,5 +1,6 @@
 from flask import Flask, jsonify
 
+from routes.aut import aut_bp
 from routes.clientes import clientes_bp
 from routes.devolucao import devolucao_bp
 from routes.funcionarios import funcionarios_bp
@@ -14,6 +15,7 @@ from routes.sinistros import sinistros_bp
 
 app = Flask(__name__)
 
+app.register_blueprint(aut_bp)
 app.register_blueprint(clientes_bp)
 app.register_blueprint(funcionarios_bp)
 app.register_blueprint(modelo_motocicleta_bp)
