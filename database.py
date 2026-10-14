@@ -1,5 +1,5 @@
 import pymysql
-from config.config import DB_CONFIG
+from config import DB_CONFIG
 
 
 def get_db_connection():
@@ -35,5 +35,22 @@ def execute_query(query, params=()):
             cursor.execute(query, params)
             conn.commit()
             return cursor.lastrowid
+    finally:
+        conn.close()
+
+
+def execute_transaction(queries):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            resultados = []
+            for query, params in queries:
+                cursor.execute(query, params)
+                resultados.append(cursor.lastrowid)
+            conn.commit()
+            return resultados
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
