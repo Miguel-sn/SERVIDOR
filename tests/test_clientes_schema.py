@@ -2,15 +2,29 @@ import unittest
 from datetime import date
 from unittest.mock import patch
 
+import jwt
 from werkzeug.security import check_password_hash
 
 from app import app
 from database import execute_transaction
+from routes.jwt_auth import criar_token_acesso
 
 
 class ClienteSchemaApiTests(unittest.TestCase):
     def setUp(self):
+        self.jwt_secret_anterior = app.config.get("JWT_SECRET_KEY")
+        app.config["JWT_SECRET_KEY"] = "test-jwt-secret-key-that-is-32bytes!"
         self.client = app.test_client()
+        with app.app_context():
+            self.headers_jwt = {
+                "Authorization": f"Bearer {criar_token_acesso(41, 'funcionario')}"
+            }
+
+    def tearDown(self):
+        if self.jwt_secret_anterior is None:
+            app.config.pop("JWT_SECRET_KEY", None)
+        else:
+            app.config["JWT_SECRET_KEY"] = self.jwt_secret_anterior
 
     def test_loga_requisicao_antes_de_responder(self):
         with self.assertLogs(app.logger, level="INFO") as registros:
@@ -30,7 +44,7 @@ class ClienteSchemaApiTests(unittest.TestCase):
             headers={
                 "Origin": "http://localhost:54321",
                 "Access-Control-Request-Method": "POST",
-                "Access-Control-Request-Headers": "content-type",
+                "Access-Control-Request-Headers": "content-type,authorization",
             },
         )
 
@@ -41,6 +55,7 @@ class ClienteSchemaApiTests(unittest.TestCase):
         )
         self.assertIn("POST", resposta.headers["Access-Control-Allow-Methods"])
         self.assertIn("Content-Type", resposta.headers["Access-Control-Allow-Headers"])
+        self.assertIn("Authorization", resposta.headers["Access-Control-Allow-Headers"])
 
     def test_cors_nao_permite_origem_remota(self):
         resposta = self.client.options(
@@ -52,6 +67,45 @@ class ClienteSchemaApiTests(unittest.TestCase):
         )
 
         self.assertNotIn("Access-Control-Allow-Origin", resposta.headers)
+
+    def test_todas_as_rotas_clientes_exigem_token_jwt(self):
+        respostas = (
+            self.client.get("/clientes"),
+            self.client.get("/clientes/41"),
+            self.client.put("/clientes/41", json={"nome": "Ana"}),
+            self.client.delete("/clientes/41"),
+        )
+
+        self.assertTrue(all(resposta.status_code == 401 for resposta in respostas))
+
+    @patch("routes.aut._verificar_senha", return_value=(True, False))
+    @patch(
+        "routes.aut.fetch_one",
+        return_value={
+            "id": 41,
+            "nome": "Ana Exemplo",
+            "email": "ana@example.com",
+            "senha_hash": "hash-de-teste",
+        },
+    )
+    def test_login_emite_token_jwt(self, fetch_one_mock, verificar_senha_mock):
+        resposta = self.client.post(
+            "/auth/login",
+            json={"email": "ana@example.com", "senha": "SenhaSegura123"},
+        )
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertEqual(resposta.json["token_type"], "Bearer")
+        self.assertEqual(resposta.json["expires_in"], 3600)
+        fetch_one_mock.assert_called_once()
+        verificar_senha_mock.assert_called_once()
+        identidade = jwt.decode(
+            resposta.json["access_token"],
+            app.config["JWT_SECRET_KEY"],
+            algorithms=["HS256"],
+        )
+        self.assertEqual(identidade["sub"], "41")
+        self.assertEqual(identidade["tipo_usuario"], "cliente")
 
     @patch("routes.aut.execute_transaction", return_value=[41, 0, 0, 0])
     @patch("routes.aut.fetch_one", return_value=None)
@@ -189,7 +243,10 @@ class ClienteSchemaApiTests(unittest.TestCase):
             }
         ]
 
-        resposta = self.client.get("/clientes")
+        resposta = self.client.get(
+            "/clientes",
+            headers=self.headers_jwt,
+        )
 
         self.assertEqual(resposta.status_code, 200)
         cliente = resposta.json[0]
@@ -206,6 +263,7 @@ class ClienteSchemaApiTests(unittest.TestCase):
     ):
         resposta = self.client.put(
             "/clientes/41",
+            headers=self.headers_jwt,
             json={
                 "endereco": {
                     "cep": "01000-000",

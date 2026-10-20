@@ -12,6 +12,7 @@ from flask import Blueprint, current_app, jsonify, request
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from database import execute_query, execute_transaction, fetch_one
+from routes.jwt_auth import JWTConfiguracaoError, criar_token_acesso
 
 aut_bp = Blueprint("aut", __name__, url_prefix="/auth")
 _codigos_recuperacao = {}
@@ -283,9 +284,18 @@ def login():
 				(generate_password_hash(senha), usuario["id"]),
 			)
 
+		try:
+			token = criar_token_acesso(usuario["id"], tipo)
+		except JWTConfiguracaoError:
+			current_app.logger.error("JWT não configurado no servidor")
+			return jsonify({"error": "Autenticação indisponível"}), 503
+
 		return jsonify(
 			{
 				"message": "Login realizado com sucesso",
+				"access_token": token,
+				"token_type": "Bearer",
+				"expires_in": 3600,
 				"tipo_usuario": tipo,
 				"usuario": {
 					"id": usuario["id"],

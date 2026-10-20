@@ -3,6 +3,7 @@ from datetime import date
 from flask import Blueprint, current_app, jsonify, request
 
 from database import execute_query, execute_transaction, fetch_all, fetch_one
+from routes.jwt_auth import jwt_obrigatorio
 
 clientes_bp = Blueprint("clientes", __name__, url_prefix="/clientes")
 
@@ -58,6 +59,7 @@ def _serializar_cliente(registro):
 
 
 @clientes_bp.route("", methods=["GET"])
+@jwt_obrigatorio
 def listar_clientes():
     try:
         registros = fetch_all(
@@ -70,6 +72,7 @@ def listar_clientes():
 
 
 @clientes_bp.route("/<int:id>", methods=["GET"])
+@jwt_obrigatorio
 def buscar_cliente(id):
     try:
         registro = fetch_one(
@@ -84,6 +87,7 @@ def buscar_cliente(id):
 
 
 @clientes_bp.route("/<int:id>", methods=["PUT"])
+@jwt_obrigatorio
 def atualizar_cliente(id):
     dados = request.get_json(silent=True) or {}
     if not isinstance(dados, dict) or not dados:
@@ -248,6 +252,7 @@ def atualizar_cliente(id):
 
 
 @clientes_bp.route("/<int:id>", methods=["DELETE"])
+@jwt_obrigatorio
 def excluir_cliente(id):
     try:
         execute_query("DELETE FROM cliente WHERE id_cliente = %s", (id,))
