@@ -18,6 +18,7 @@ from database import (
 	execute_transaction,
 	fetch_one,
 )
+from rate_limit import rate_limit
 from routes.jwt_auth import JWTConfiguracaoError, criar_token_acesso, jwt_obrigatorio
 
 aut_bp = Blueprint("aut", __name__, url_prefix="/auth")
@@ -185,6 +186,7 @@ def _buscar_token_recuperacao(token):
 	}
 
 @aut_bp.route("/cadastro", methods=["POST"])
+@rate_limit(5, 60)
 def cadastrar_cliente():
 	dados = request.get_json(silent=True) or {}
 	if not isinstance(dados, dict):
@@ -352,6 +354,7 @@ def cadastrar_cliente():
 
 
 @aut_bp.route("/login", methods=["POST"])
+@rate_limit(10, 60)
 def login():
 	dados = request.get_json(silent=True) or {}
 	email = dados.get("email", "")
@@ -463,6 +466,7 @@ def perfil_autenticado():
 
 
 @aut_bp.route("/recuperacao", methods=["POST"])
+@rate_limit(3, 300)
 def recuperar_senha():
 	dados = request.get_json(silent=True) or {}
 	if not isinstance(dados, dict):
@@ -566,6 +570,7 @@ def recuperar_senha():
 
 
 @aut_bp.route("/recuperacao/validar", methods=["POST"])
+@rate_limit(10, 300)
 def validar_token_recuperacao():
 	dados = request.get_json(silent=True) or {}
 	if not isinstance(dados, dict):
@@ -590,6 +595,7 @@ def validar_token_recuperacao():
 
 @aut_bp.route("/atualizaSenha", methods=["PUT"])
 @aut_bp.route("/recuperacao/confirmar", methods=["POST"])
+@rate_limit(10, 300)
 def atualizar_senha():
 	dados = request.get_json(silent=True) or {}
 	if not isinstance(dados, dict):

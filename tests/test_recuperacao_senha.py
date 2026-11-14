@@ -1,7 +1,12 @@
 import unittest
+import os
 from unittest.mock import patch
 
 from werkzeug.security import check_password_hash
+
+os.environ.setdefault("JWT_SECRET_KEY", "test-jwt-secret-key-that-is-32bytes!")
+os.environ.setdefault("FLASK_SECRET_KEY", "test-flask-secret-key-that-is-32bytes!")
+os.environ.setdefault("APP_ENV", "test")
 
 from app import app
 from routes.aut import (

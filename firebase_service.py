@@ -28,8 +28,13 @@ def _criar_cliente_firestore():
         try:
             aplicativo = firebase_admin.get_app()
         except ValueError:
+            opcoes = {}
+            bucket = os.getenv("FIREBASE_STORAGE_BUCKET")
+            if bucket:
+                opcoes["storageBucket"] = bucket
             aplicativo = firebase_admin.initialize_app(
-                credentials.Certificate(configuracao)
+                credentials.Certificate(configuracao),
+                opcoes,
             )
         return firestore.client(app=aplicativo)
     except (TypeError, ValueError, json.JSONDecodeError) as erro:
