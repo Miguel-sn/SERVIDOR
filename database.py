@@ -2,6 +2,10 @@ import pymysql
 from config import DB_CONFIG
 
 
+class TransactionConflictError(RuntimeError):
+    pass
+
+
 def get_db_connection():
     db_config = dict(DB_CONFIG)
     db_config["cursorclass"] = pymysql.cursors.DictCursor
@@ -39,13 +43,21 @@ def execute_query(query, params=()):
         conn.close()
 
 
-def execute_transaction(queries):
+def execute_transaction(queries, expected_rowcounts=None):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
             resultados = []
-            for query, params in queries:
+            for indice, (query, params) in enumerate(queries):
                 cursor.execute(query, params)
+                if (
+                    expected_rowcounts is not None
+                    and indice in expected_rowcounts
+                    and cursor.rowcount != expected_rowcounts[indice]
+                ):
+                    raise TransactionConflictError(
+                        "A operação foi alterada por outra solicitação"
+                    )
                 resultados.append(cursor.lastrowid)
             conn.commit()
             return resultados

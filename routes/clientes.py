@@ -10,8 +10,7 @@ clientes_bp = Blueprint("clientes", __name__, url_prefix="/clientes")
 _CLIENTE_COM_RELACIONAMENTOS = """
     SELECT
         c.id_cliente, c.nome, c.cpf, c.rg, c.data_nascimento, c.telefone,
-        c.email, c.nome_contato_emergencia, c.telefone_contato_emergencia,
-        c.status, c.data_cadastro,
+        c.email, c.status, c.data_cadastro,
         e.id_endereco, e.cep, e.logradouro, e.numero, e.complemento,
         e.cidade, e.uf,
         h.id_habilitacao, h.numero_registro, h.categoria, h.data_validade
@@ -32,8 +31,6 @@ def _serializar_cliente(registro):
             "data_nascimento",
             "telefone",
             "email",
-            "nome_contato_emergencia",
-            "telefone_contato_emergencia",
             "status",
             "data_cadastro",
         )
@@ -103,9 +100,6 @@ def atualizar_cliente(id):
         "data_nascimento",
         "telefone",
         "email",
-        "nome_contato_emergencia",
-        "telefone_contato_emergencia",
-        "senha_hash",
         "status",
     ):
         if campo in dados:
@@ -114,13 +108,6 @@ def atualizar_cliente(id):
                 valor = "".join(caractere for caractere in str(valor) if caractere.isdigit())
                 if len(valor) != 11:
                     return jsonify({"error": "O CPF deve conter 11 dígitos"}), 400
-            elif campo in (
-                "nome_contato_emergencia",
-                "telefone_contato_emergencia",
-            ):
-                if valor is not None and not isinstance(valor, str):
-                    return jsonify({"error": f"O campo {campo} deve ser texto"}), 400
-                valor = valor.strip() or None if isinstance(valor, str) else None
             campos_cliente.append(f"{campo} = %s")
             valores_cliente.append(valor)
 
